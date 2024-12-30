@@ -1,0 +1,75 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+
+Description: SAM template for Sibyl Telegram Interface
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues:
+      - dev
+      - prod
+    Description: Environment name
+
+Globals:
+  Function:
+    Timeout: 30
+    MemorySize: 128
+    Runtime: python3.12
+    Environment:
+      Variables:
+        ENVIRONMENT: !Ref Environment
+
+Resources:
+  SibylTelegramFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./src
+      Handler: sibyl_telegram_interface.handlers.lambda_handler.lambda_handler
+      Description: Lambda function for handling Telegram bot messages
+      Policies:
+        - SSMParameterReadPolicy:
+            ParameterName: /sibyl/telegram/bot-token
+      FunctionUrlConfig:
+        AuthType: NONE
+        Cors:
+          AllowOrigins:
+            - https://api.telegram.org
+      Tags:
+        Environment: !Ref Environment
+        Application: SibylTelegram
+
+  WebhookSetupFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./src
+      Handler: sibyl_telegram_interface.handlers.webhook_setup.lambda_handler
+      Description: Function to set up Telegram webhook
+      Timeout: 60
+      Policies:
+        - SSMParameterReadPolicy:
+            ParameterName: /sibyl/telegram/bot-token
+      Tags:
+        Environment: !Ref Environment
+        Application: SibylTelegram
+
+  WebhookSetup:
+    Type: Custom::WebhookSetup
+    Properties:
+      ServiceToken: !GetAtt WebhookSetupFunction.Arn
+      FunctionUrl: !GetAtt SibylTelegramFunctionUrl.FunctionUrl
+
+  SibylTelegramFunctionUrl:
+    Type: AWS::Lambda::Url
+    Properties:
+      TargetFunctionArn: !GetAtt SibylTelegramFunction.Arn
+      AuthType: NONE
+      Cors:
+        AllowOrigins:
+          - https://api.telegram.org
+
+Outputs:
+  FunctionUrl:
+    Description: "Lambda Function URL for the webhook"
+    Value: !GetAtt SibylTelegramFunctionUrl.FunctionUrl
