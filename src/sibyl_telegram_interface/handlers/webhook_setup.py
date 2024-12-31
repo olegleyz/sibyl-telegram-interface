@@ -1,18 +1,44 @@
 """Lambda handler for setting up the Telegram webhook."""
 
 import json
+import logging
 from typing import Dict, Any
-import cfnresponse
 
 from ..telegram.bot import TelegramBot
 from ..utils.ssm import get_bot_token
+from ..utils import cfnresponse
+
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
 
 def lambda_handler(event: Dict[str, Any], context: Any) -> None:
     """Handle webhook setup as a CloudFormation custom resource."""
+    
+    # Validate event structure early
+    if not isinstance(event, dict):
+        logger.error(f"Invalid event type: {type(event)}")
+        return
+        
+    request_type = event.get('RequestType')
+    if not request_type:
+        logger.error("No RequestType in event")
+        return
+        
+    logger.info(f"Processing {request_type} request")
+    
     try:
-        if event['RequestType'] in ['Create', 'Update']:
+        if request_type in ['Create', 'Update']:
             # Get the function URL from the event
-            function_url = event['ResourceProperties']['FunctionUrl']
+            properties = event.get('ResourceProperties', {})
+            function_url = properties.get('FunctionUrl')
+            
+            if not function_url:
+                error_message = "FunctionUrl not provided in ResourceProperties"
+                logger.error(error_message)
+                cfnresponse.send(event, context, cfnresponse.FAILED, {
+                    'Error': error_message
+                })
+                return
             
             try:
                 # Get bot token and initialize bot
@@ -21,6 +47,7 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> None:
                 
                 # Set up webhook
                 response = bot.set_webhook(function_url)
+                logger.info(f"Webhook setup response: {response}")
                 
                 if not response.get('ok'):
                     error_message = response.get('description', 'Unknown error')
@@ -29,7 +56,11 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> None:
                             "ERROR: The bot token stored in SSM Parameter Store is invalid. "
                             "Please update it with a valid token."
                         )
-                    raise ValueError(error_message)
+                    logger.error(error_message)
+                    cfnresponse.send(event, context, cfnresponse.FAILED, {
+                        'Error': error_message
+                    })
+                    return
                 
                 cfnresponse.send(event, context, cfnresponse.SUCCESS, {
                     'WebhookUrl': function_url,
@@ -37,18 +68,20 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> None:
                 })
                 
             except ValueError as e:
-                print(str(e))
+                error_message = str(e)
+                logger.error(f"Value Error: {error_message}")
                 cfnresponse.send(event, context, cfnresponse.FAILED, {
-                    'Error': str(e)
+                    'Error': error_message
                 })
                 
-        elif event['RequestType'] == 'Delete':
-            # Clean up webhook if needed
+        elif request_type == 'Delete':
+            # Always respond with success for Delete operations
+            logger.info("Processing Delete request")
             cfnresponse.send(event, context, cfnresponse.SUCCESS, {})
             
     except Exception as e:
         error_message = str(e)
-        print(f"Error: {error_message}")
+        logger.error(f"Unexpected error: {error_message}")
         cfnresponse.send(event, context, cfnresponse.FAILED, {
             'Error': error_message
         })

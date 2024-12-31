@@ -30,7 +30,7 @@ Resources:
       Description: Lambda function for handling Telegram bot messages
       Policies:
         - SSMParameterReadPolicy:
-            ParameterName: /sibyl/telegram/bot-token
+            ParameterName: sibyl/telegram/bot-token
       FunctionUrlConfig:
         AuthType: NONE
         Cors:
@@ -49,7 +49,7 @@ Resources:
       Timeout: 60
       Policies:
         - SSMParameterReadPolicy:
-            ParameterName: /sibyl/telegram/bot-token
+            ParameterName: sibyl/telegram/bot-token
       Tags:
         Environment: !Ref Environment
         Application: SibylTelegram
@@ -59,15 +59,6 @@ Resources:
     Properties:
       ServiceToken: !GetAtt WebhookSetupFunction.Arn
       FunctionUrl: !GetAtt SibylTelegramFunctionUrl.FunctionUrl
-
-  SibylTelegramFunctionUrl:
-    Type: AWS::Lambda::Url
-    Properties:
-      TargetFunctionArn: !GetAtt SibylTelegramFunction.Arn
-      AuthType: NONE
-      Cors:
-        AllowOrigins:
-          - https://api.telegram.org
 
 Outputs:
   FunctionUrl:

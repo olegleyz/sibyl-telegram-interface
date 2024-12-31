@@ -1,0 +1,10 @@
+version = 0.1
+[default.deploy.parameters]
+stack_name = "sibyl-telegram-interface"
+resolve_s3 = true
+s3_prefix = "sibyl-telegram-interface"
+region = "us-east-1"
+profile = "admin"
+capabilities = "CAPABILITY_IAM"
+parameter_overrides = "Environment=\"dev\""
+image_repositories = []

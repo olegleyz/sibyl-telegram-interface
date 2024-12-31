@@ -1,21 +1,18 @@
 [build-system]
-requires = ["setuptools>=45", "setuptools_scm[toml]>=6.2"]
+requires = ["setuptools>=45"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "sibyl-telegram-interface"
-dynamic = ["version"]
+version = "0.1.0"
 description = "AWS Lambda function that handles Telegram bot messages"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "requests==2.31.0",
     "python-dotenv==1.0.0",
-    "pydantic==2.5.2",
+    "pydantic==1.10.13",
     "ipaddress==1.0.23",
     "aws-lambda-powertools==2.30.2",
     "boto3==1.34.5",
 ]
-
-[tool.setuptools_scm]
-write_to = "src/sibyl_telegram_interface/_version.py"
