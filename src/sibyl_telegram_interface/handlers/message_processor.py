@@ -2,43 +2,65 @@
 
 import json
 from typing import Dict, Any
+import boto3
+from botocore.config import Config
 
 from aws_lambda_powertools import Logger
+from aws_lambda_powertools.utilities.typing import LambdaContext
+from aws_lambda_powertools.utilities.parameters import get_parameter
 
 from ..telegram.bot import TelegramBot
 from ..telegram.models import TelegramMessage
-from ..utils.ssm import get_bot_token
+from ..config.settings import BOT_TOKEN_PARAM_PATH
 
+# Configure boto3 with performance optimizations
+boto_config = Config(
+    connect_timeout=2,
+    read_timeout=2,
+    parameter_validation=False,  # Skip parameter validation for speed
+    retries={'max_attempts': 2}  # Reduce retry attempts
+)
+
+# Initialize clients outside handler for connection reuse
+ssm_client = boto3.client('ssm', config=boto_config)
 logger = Logger()
 
+# Cache for bot token
+_BOT_TOKEN = None
+
+def get_cached_bot_token() -> str:
+    """Get bot token with caching."""
+    global _BOT_TOKEN
+    if _BOT_TOKEN is None:
+        _BOT_TOKEN = get_parameter(BOT_TOKEN_PARAM_PATH, decrypt=True)
+    return _BOT_TOKEN
+
 @logger.inject_lambda_context
-def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
+def lambda_handler(event: Dict[str, Any], context: LambdaContext) -> Dict[str, Any]:
     """Process messages from SQS queue."""
     try:
+        # Get bot token once and reuse
+        bot_token = get_cached_bot_token()
+        bot = TelegramBot(bot_token)
+        
+        # Process all messages in batch
         for record in event['Records']:
-            process_message(json.loads(record['body']))
+            process_message(bot, json.loads(record['body']))
+            
         return {'statusCode': 200}
     except Exception as e:
         logger.error(f"Error processing message: {str(e)}")
         return {'statusCode': 500}
 
-def process_message(message_data: Dict[str, Any]) -> None:
+def process_message(bot: TelegramBot, message_data: Dict[str, Any]) -> None:
     """Process a single message from the queue."""
     try:
-        # Initialize bot and reconstruct message
-        bot = TelegramBot(get_bot_token())
-        message = TelegramMessage(**message_data['message'])
-
-        # Here you can perform time-consuming operations:
-        # - Call external APIs
-        # - Process complex computations
-        # - Handle media
-        # - Interact with databases
-        response_text = "Your message has been processed"
-
-        # Send response back to Telegram
-        # If this fails, the message will stay in the queue and be retried
-        bot.send_message(message.chat_id, response_text)
+        # Reconstruct message without validation for speed
+        message = message_data['message']
+        chat_id = message['chat_id']
+        
+        # Quick response
+        bot.send_message(chat_id, "Message processed")
         
     except Exception as e:
         logger.error(f"Failed to process message: {str(e)}")

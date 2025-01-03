@@ -20,8 +20,6 @@ Globals:
     Environment:
       Variables:
         ENVIRONMENT: !Ref Environment
-    SnapStart:
-      ApplyOn: PublishedVersions
 
 Resources:
   WebhookHandlerLogGroup:
@@ -67,7 +65,6 @@ Resources:
       CodeUri: ./src
       Handler: sibyl_telegram_interface.handlers.lambda_handler.lambda_handler
       Description: Lambda function for handling Telegram bot messages
-      AutoPublishAlias: live
       LoggingConfig:
         LogGroup: !Ref WebhookHandlerLogGroup
         LogFormat: Text
@@ -96,7 +93,6 @@ Resources:
       CodeUri: ./src
       Handler: sibyl_telegram_interface.handlers.message_processor.lambda_handler
       Description: Process Telegram messages from SQS queue
-      AutoPublishAlias: live
       LoggingConfig:
         LogGroup: !Ref MessageProcessorLogGroup
         LogFormat: Text
@@ -107,6 +103,7 @@ Resources:
           Properties:
             Queue: !GetAtt MessageQueue.Arn
             BatchSize: 1  # Process one message at a time
+            FunctionResponseTypes: ["ReportBatchItemFailures"]  # Enable partial batch processing
       Policies:
         - SSMParameterReadPolicy:
             ParameterName: sibyl/telegram/bot-token
@@ -121,7 +118,6 @@ Resources:
       CodeUri: ./src
       Handler: sibyl_telegram_interface.handlers.webhook_setup.lambda_handler
       Description: Function to set up Telegram webhook
-      AutoPublishAlias: live
       LoggingConfig:
         LogGroup: !Ref WebhookSetupLogGroup
         LogFormat: Text
