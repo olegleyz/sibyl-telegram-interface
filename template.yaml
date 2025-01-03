@@ -22,15 +22,34 @@ Globals:
         ENVIRONMENT: !Ref Environment
 
 Resources:
+  SibylTelegramMessageQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      VisibilityTimeout: 60
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt SibylTelegramMessageQueueDLQ.Arn
+        maxReceiveCount: 3
+
+  SibylTelegramMessageQueueDLQ:
+    Type: AWS::SQS::Queue
+    Properties:
+      MessageRetentionPeriod: 1209600  # 14 days
+
   SibylTelegramFunction:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: ./src
       Handler: sibyl_telegram_interface.handlers.lambda_handler.lambda_handler
       Description: Lambda function for handling Telegram bot messages
+      Environment:
+        Variables:
+          ENVIRONMENT: !Ref Environment
+          SQS_QUEUE_URL: !Ref SibylTelegramMessageQueue
       Policies:
         - SSMParameterReadPolicy:
             ParameterName: sibyl/telegram/bot-token
+        - SQSSendMessagePolicy:
+            QueueName: !GetAtt SibylTelegramMessageQueue.QueueName
       FunctionUrlConfig:
         AuthType: NONE
         Cors:
@@ -40,7 +59,27 @@ Resources:
         Environment: !Ref Environment
         Application: SibylTelegram
 
-  WebhookSetupFunction:
+  SibylTelegramMessageProcessorFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./src
+      Handler: sibyl_telegram_interface.handlers.message_processor.lambda_handler
+      Description: Process Telegram messages from SQS queue
+      Timeout: 60  # Longer timeout for processing
+      Events:
+        SQSEvent:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt SibylTelegramMessageQueue.Arn
+            BatchSize: 1  # Process one message at a time
+      Policies:
+        - SSMParameterReadPolicy:
+            ParameterName: sibyl/telegram/bot-token
+      Tags:
+        Environment: !Ref Environment
+        Application: SibylTelegram
+
+  SibylTelegramWebhookSetupFunction:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: ./src
@@ -54,13 +93,19 @@ Resources:
         Environment: !Ref Environment
         Application: SibylTelegram
 
-  WebhookSetup:
+  SibylTelegramWebhookSetup:
     Type: Custom::WebhookSetup
     Properties:
-      ServiceToken: !GetAtt WebhookSetupFunction.Arn
+      ServiceToken: !GetAtt SibylTelegramWebhookSetupFunction.Arn
       FunctionUrl: !GetAtt SibylTelegramFunctionUrl.FunctionUrl
 
 Outputs:
   FunctionUrl:
     Description: "Lambda Function URL for the webhook"
     Value: !GetAtt SibylTelegramFunctionUrl.FunctionUrl
+  QueueUrl:
+    Description: "URL of the SQS queue for message processing"
+    Value: !Ref SibylTelegramMessageQueue
+  DLQUrl:
+    Description: "URL of the Dead Letter Queue"
+    Value: !Ref SibylTelegramMessageQueueDLQ

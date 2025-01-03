@@ -1,5 +1,6 @@
 """Telegram bot implementation."""
 
+import ipaddress
 import requests
 from typing import Dict, Any
 from ..config import settings
@@ -17,6 +18,7 @@ class TelegramBot:
             '149.154.160.0/20',
             '91.108.4.0/22',
         ]
+        self.telegram_ports = ("443", "80", "88", "8443")
 
     def validate_telegram_ip(self, ip_address: str) -> bool:
         """Validate if the IP address belongs to Telegram."""
@@ -29,6 +31,10 @@ class TelegramBot:
         except ValueError:
             return False
 
+    def validate_telegram_port(self, port: str) -> bool:
+        """Validate if the port belongs to Telegram."""
+        return port in self.telegram_ports
+        
     def send_message(self, chat_id: int, text: str) -> Dict[str, Any]:
         """Send a message to a chat."""
         url = f"{self.api_base_url}/sendMessage"

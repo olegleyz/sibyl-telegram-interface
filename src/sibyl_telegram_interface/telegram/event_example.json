@@ -1,0 +1,51 @@
+{
+    "level": "INFO",
+    "location": "lambda_handler:22",
+    "message": {
+        "version": "2.0",
+        "routeKey": "$default",
+        "rawPath": "/",
+        "rawQueryString": "",
+        "headers": {
+            "x-amzn-tls-cipher-suite": "TLS_AES_128_GCM_SHA256",
+            "content-length": "334",
+            "x-amzn-tls-version": "TLSv1.3",
+            "x-amzn-trace-id": "Self=1-67734b4a-26ca34eb1dfcf9e3683f62a3;Root=1-67734b4a-3cf8bef93315b0596047b498",
+            "x-forwarded-proto": "https",
+            "host": "pl4gvb2xq7lpdxmravtn2f5qse0rizhr.lambda-url.us-east-1.on.aws",
+            "x-forwarded-port": "443",
+            "content-type": "application/json",
+            "x-forwarded-for": "91.108.5.80",
+            "accept-encoding": "gzip, deflate",
+            "user-agent": "Apache-HttpClient/UNAVAILABLE (Java/17.0.12)"
+        },
+        "requestContext": {
+            "accountId": "anonymous",
+            "apiId": "pl4gvb2xq7lpdxmravtn2f5qse0rizhr",
+            "domainName": "pl4gvb2xq7lpdxmravtn2f5qse0rizhr.lambda-url.us-east-1.on.aws",
+            "domainPrefix": "pl4gvb2xq7lpdxmravtn2f5qse0rizhr",
+            "http": {
+                "method": "POST",
+                "path": "/",
+                "protocol": "HTTP/1.1",
+                "sourceIp": "91.108.5.80",
+                "userAgent": "Apache-HttpClient/UNAVAILABLE (Java/17.0.12)"
+            },
+            "requestId": "c7ddf5d0-c7ab-49e7-bf6d-76f8cfdf1e64",
+            "routeKey": "$default",
+            "stage": "$default",
+            "time": "31/Dec/2024:01:39:22 +0000",
+            "timeEpoch": 1735609162301
+        },
+        "body": "{\"update_id\":709704525,\n\"message\":{\"message_id\":167,\"from\":{\"id\":593022098,\"is_bot\":false,\"first_name\":\"Oleg\",\"last_name\":\"Leizerov\",\"username\":\"leizerov\",\"language_code\":\"en\",\"is_premium\":true},\"chat\":{\"id\":593022098,\"first_name\":\"Oleg\",\"last_name\":\"Leizerov\",\"username\":\"leizerov\",\"type\":\"private\"},\"date\":1735608551,\"text\":\"Juju\"}}",
+        "isBase64Encoded": false
+    },
+    "timestamp": "2024-12-31 01:39:26,156+0000",
+    "service": "service_undefined",
+    "cold_start": true,
+    "function_name": "sibyl-telegram-interface-SibylTelegramFunction-9dgKoVTEaruL",
+    "function_memory_size": "128",
+    "function_arn": "arn:aws:lambda:us-east-1:557690606021:function:sibyl-telegram-interface-SibylTelegramFunction-9dgKoVTEaruL",
+    "function_request_id": "c7ddf5d0-c7ab-49e7-bf6d-76f8cfdf1e64",
+    "xray_trace_id": "1-67734b4a-3cf8bef93315b0596047b498"
+}
