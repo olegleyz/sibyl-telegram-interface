@@ -6,7 +6,11 @@ AWS Lambda function that handles Telegram bot messages and interfaces with the b
 
 1. Create a Telegram bot and get the bot token from [@BotFather](https://t.me/botfather)
 
-2. Store the bot token in AWS Parameter Store:
+2. Deploy the sibyl-core CloudFormation stack first
+   - This stack exports the API endpoint that this service depends on
+   - The stack name should follow the pattern `sibyl-core-{env}` where env is either `dev` or `prod`
+
+3. Store the bot token in AWS Parameter Store:
 ```bash
 aws ssm put-parameter \
     --name "/sibyl/telegram/bot-token" \

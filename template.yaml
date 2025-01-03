@@ -97,6 +97,11 @@ Resources:
         LogGroup: !Ref MessageProcessorLogGroup
         LogFormat: Text
       Timeout: 60  # Longer timeout for processing
+      Environment:
+        Variables:
+          ENVIRONMENT: !Ref Environment
+          API_ENDPOINT: 
+            Fn::ImportValue: !Sub 'sibyl-core-${Environment}-ApiEndpoint'
       Events:
         SQSEvent:
           Type: SQS
