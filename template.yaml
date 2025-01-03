@@ -20,36 +20,66 @@ Globals:
     Environment:
       Variables:
         ENVIRONMENT: !Ref Environment
+    SnapStart:
+      ApplyOn: PublishedVersions
 
 Resources:
-  SibylTelegramMessageQueue:
+  WebhookHandlerLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      LogGroupName: !Sub /aws/lambda/sibyl-telegram-${Environment}-webhook-handler
+      RetentionInDays: 60
+
+  MessageProcessorLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      LogGroupName: !Sub /aws/lambda/sibyl-telegram-${Environment}-message-processor
+      RetentionInDays: 60
+
+  WebhookSetupLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      LogGroupName: !Sub /aws/lambda/sibyl-telegram-${Environment}-webhook-setup
+      RetentionInDays: 60
+
+  MessageQueue:
     Type: AWS::SQS::Queue
     Properties:
       VisibilityTimeout: 60
       RedrivePolicy:
-        deadLetterTargetArn: !GetAtt SibylTelegramMessageQueueDLQ.Arn
+        deadLetterTargetArn: !GetAtt MessageQueueDLQ.Arn
         maxReceiveCount: 3
 
-  SibylTelegramMessageQueueDLQ:
+  MessageQueueDLQ:
     Type: AWS::SQS::Queue
     Properties:
       MessageRetentionPeriod: 1209600  # 14 days
 
-  SibylTelegramFunction:
+  WebhookHandlerFunction:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: ./src
       Handler: sibyl_telegram_interface.handlers.lambda_handler.lambda_handler
       Description: Lambda function for handling Telegram bot messages
+      AutoPublishAlias: live
+      LoggingConfig:
+        LogGroup: !Ref WebhookHandlerLogGroup
+        LogFormat: Text
       Environment:
         Variables:
           ENVIRONMENT: !Ref Environment
-          SQS_QUEUE_URL: !Ref SibylTelegramMessageQueue
+          SQS_QUEUE_URL: !Ref MessageQueue
       Policies:
         - SSMParameterReadPolicy:
             ParameterName: sibyl/telegram/bot-token
         - SQSSendMessagePolicy:
-            QueueName: !GetAtt SibylTelegramMessageQueue.QueueName
+            QueueName: !GetAtt MessageQueue.QueueName
       FunctionUrlConfig:
         AuthType: NONE
         Cors:
@@ -58,19 +88,24 @@ Resources:
       Tags:
         Environment: !Ref Environment
         Application: SibylTelegram
+    DependsOn: WebhookHandlerLogGroup
 
-  SibylTelegramMessageProcessorFunction:
+  MessageProcessorFunction:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: ./src
       Handler: sibyl_telegram_interface.handlers.message_processor.lambda_handler
       Description: Process Telegram messages from SQS queue
+      AutoPublishAlias: live
+      LoggingConfig:
+        LogGroup: !Ref MessageProcessorLogGroup
+        LogFormat: Text
       Timeout: 60  # Longer timeout for processing
       Events:
         SQSEvent:
           Type: SQS
           Properties:
-            Queue: !GetAtt SibylTelegramMessageQueue.Arn
+            Queue: !GetAtt MessageQueue.Arn
             BatchSize: 1  # Process one message at a time
       Policies:
         - SSMParameterReadPolicy:
@@ -78,13 +113,18 @@ Resources:
       Tags:
         Environment: !Ref Environment
         Application: SibylTelegram
+    DependsOn: MessageProcessorLogGroup
 
-  SibylTelegramWebhookSetupFunction:
+  WebhookSetupFunction:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: ./src
       Handler: sibyl_telegram_interface.handlers.webhook_setup.lambda_handler
       Description: Function to set up Telegram webhook
+      AutoPublishAlias: live
+      LoggingConfig:
+        LogGroup: !Ref WebhookSetupLogGroup
+        LogFormat: Text
       Timeout: 60
       Policies:
         - SSMParameterReadPolicy:
@@ -92,20 +132,21 @@ Resources:
       Tags:
         Environment: !Ref Environment
         Application: SibylTelegram
+    DependsOn: WebhookSetupLogGroup
 
-  SibylTelegramWebhookSetup:
+  WebhookSetup:
     Type: Custom::WebhookSetup
     Properties:
-      ServiceToken: !GetAtt SibylTelegramWebhookSetupFunction.Arn
-      FunctionUrl: !GetAtt SibylTelegramFunctionUrl.FunctionUrl
+      ServiceToken: !GetAtt WebhookSetupFunction.Arn
+      FunctionUrl: !GetAtt WebhookHandlerFunctionUrl.FunctionUrl
 
 Outputs:
   FunctionUrl:
     Description: "Lambda Function URL for the webhook"
-    Value: !GetAtt SibylTelegramFunctionUrl.FunctionUrl
+    Value: !GetAtt WebhookHandlerFunctionUrl.FunctionUrl
   QueueUrl:
     Description: "URL of the SQS queue for message processing"
-    Value: !Ref SibylTelegramMessageQueue
+    Value: !Ref MessageQueue
   DLQUrl:
     Description: "URL of the Dead Letter Queue"
-    Value: !Ref SibylTelegramMessageQueueDLQ
+    Value: !Ref MessageQueueDLQ
