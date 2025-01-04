@@ -12,6 +12,7 @@ from aws_lambda_powertools.utilities.parameters import get_parameter
 from ..telegram.bot import TelegramBot
 from ..telegram.models import TelegramMessage
 from ..config.settings import BOT_TOKEN_PARAM_PATH
+from ..services.sibyl_core import SibylCoreService
 
 # Configure boto3 with performance optimizations
 boto_config = Config(
@@ -23,6 +24,7 @@ boto_config = Config(
 
 # Initialize clients outside handler for connection reuse
 ssm_client = boto3.client('ssm', config=boto_config)
+sibyl_client = SibylCoreService()
 logger = Logger()
 
 # Cache for bot token
@@ -56,6 +58,8 @@ def process_message(bot: TelegramBot, message_data: Dict[str, Any]) -> None:
     """Process a single message from the queue."""
     try:
         # Reconstruct message without validation for speed
+        logger.debug(f"Processing message: {message_data}")
+        logger.debug(f"User: {sibyl_client.get_user_by_telegram_id(telegram_id=123)}")
         message = message_data['message']
         chat_id = message['chat_id']
         

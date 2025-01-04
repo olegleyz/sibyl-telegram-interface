@@ -1,0 +1,27 @@
+{
+    "message": {
+      "message": {
+        "message_id": 254,
+        "from": {
+          "id": 593022098,
+          "is_bot": false,
+          "first_name": "Oleg",
+          "last_name": "Leizerov",
+          "username": "leizerov",
+          "language_code": "en",
+          "is_premium": true
+        },
+        "chat": {
+          "id": 593022098,
+          "first_name": "Oleg",
+          "last_name": "Leizerov",
+          "username": "leizerov",
+          "type": "private"
+        },
+        "date": 1735968628,
+        "text": "Bella"
+      },
+      "user_id": 593022098,
+      "chat_id": 593022098
+    }
+  }
