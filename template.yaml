@@ -11,6 +11,14 @@ Parameters:
       - dev
       - prod
     Description: Environment name
+  AgentId:
+    Type: String
+    Default: GHYCJWTPIA
+    Description: Bedrock Agent ID for Sibyl
+  AgentAliasId:
+    Type: String  
+    Default: Z6NEJEPJPX
+    Description: Bedrock Agent Alias ID for Sibyl
 
 Globals:
   Function:
@@ -20,6 +28,7 @@ Globals:
     Environment:
       Variables:
         ENVIRONMENT: !Ref Environment
+        POWERTOOLS_LOG_LEVEL: "INFO"
 
 Resources:
   WebhookHandlerLogGroup:
@@ -100,8 +109,10 @@ Resources:
       Environment:
         Variables:
           ENVIRONMENT: !Ref Environment
-          API_ENDPOINT: 
-            Fn::ImportValue: !Sub 'sibyl-core-${Environment}-ApiEndpoint'
+          AGENT_ID: !Ref AgentId
+          AGENT_ALIAS_ID: !Ref AgentAliasId
+          # API_ENDPOINT: 
+          #   Fn::ImportValue: !Sub 'sibyl-core-${Environment}-ApiEndpoint'
       Events:
         SQSEvent:
           Type: SQS
@@ -112,6 +123,11 @@ Resources:
       Policies:
         - SSMParameterReadPolicy:
             ParameterName: sibyl/telegram/bot-token
+        - Statement:
+          - Effect: Allow
+            Action:
+              - bedrock:InvokeAgent
+            Resource:  !Sub 'arn:aws:bedrock:${AWS::Region}:${AWS::AccountId}:agent-alias/${AgentId}/${AgentAliasId}'
       Tags:
         Environment: !Ref Environment
         Application: SibylTelegram

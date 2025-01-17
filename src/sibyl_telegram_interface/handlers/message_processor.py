@@ -4,6 +4,7 @@ import json
 from typing import Dict, Any
 import boto3
 from botocore.config import Config
+import logging
 
 from aws_lambda_powertools import Logger
 from aws_lambda_powertools.utilities.typing import LambdaContext
@@ -13,6 +14,11 @@ from ..telegram.bot import TelegramBot
 from ..telegram.models import TelegramMessage
 from ..config.settings import BOT_TOKEN_PARAM_PATH
 from ..services.sibyl_core import SibylCoreService
+from ..services.bedrock import Bedrock
+
+# Configure logging
+logger = Logger()
+logger.setLevel(logging.INFO)
 
 # Configure boto3 with performance optimizations
 boto_config = Config(
@@ -25,7 +31,7 @@ boto_config = Config(
 # Initialize clients outside handler for connection reuse
 ssm_client = boto3.client('ssm', config=boto_config)
 sibyl_client = SibylCoreService()
-logger = Logger()
+bedrock = Bedrock()
 
 # Cache for bot token
 _BOT_TOKEN = None
@@ -61,10 +67,14 @@ def process_message(bot: TelegramBot, message_data: Dict[str, Any]) -> None:
         logger.debug(f"Processing message: {message_data}")
         logger.debug(f"User: {sibyl_client.get_user_by_telegram_id(telegram_id=123)}")
         message = message_data['message']
-        chat_id = message['chat_id']
+        chat_id = message["chat_id"]
+        user_id = str(message["user_id"])
+
+        input_text = message["message"]['text'].replace("\\", "").replace('"', '')
+        logger.info(f"input: {input_text}")
         
-        # Quick response
-        bot.send_message(chat_id, "Message processed")
+        output = bedrock.invoke_agent(user_id=user_id, prompt=input_text)
+        bot.send_message(chat_id, output if output else "Sibyl is silent, tell they more.")
         
     except Exception as e:
         logger.error(f"Failed to process message: {str(e)}")
